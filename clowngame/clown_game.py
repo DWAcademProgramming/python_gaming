@@ -15,7 +15,7 @@ clock = pygame.time.Clock()
 
 #Set game values
 PLAYER_STARTING_LIVES = 5
-CLOWN_STARTING_VELOCITY = 5
+CLOWN_STARTING_VELOCITY = 2.5
 CLOWN_ACCERLATION = 1
 
 score = 0
