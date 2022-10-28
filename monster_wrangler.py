@@ -1,4 +1,5 @@
 from re import S
+from sys import builtin_module_names
 import pygame, random
 
 #Initialize pygame
@@ -17,16 +18,99 @@ clock = pygame.time.Clock()
 #Define Classes
 class Game(): 
     """A class to control gameplay"""
-    def __init__(self):
+    def __init__(self, player, monster_group):
         """Initialize the game ibject"""
+        #Set game values
+        self.score = 0
+        self.round_number = 0
+
+        self.round_time = 0
+        self.frame_count = 0
+
+        self.player = player
+        self.monster_group = monster_group
+
+        #Set sounds and music
+        self.next_level_sound = pygame.mixer.Sound("next_level.wav")
+
+        #Set font 
+        self.font = pygame.font.Font("Abrushow.ttf", 24)
+
+        #Set images
+        blue_image = pygame.image.load("blue_monster.png")
+        green_image = pygame.image.load("green_monster.png")
+        yellow_image = pygame.image.load("yellow_monster.png")
+        purple_image = pygame.image.load("purpke_monster.png")
+        #This list corresponses with the monster type attributes
+        self.target_monster_images = [blue_image, green_image, purple_image, yellow_image]
+
+        self.target_monster_type = random.randint(0,3)
+        self.target_monster_image = self.target_monster_images[self.target_monster_type]
+
+        self.target_monster_rect = self.target_monster_image.get_rect()
+        self.target_monster_rect.centerx = WINDOW_WIDTH//2
+        self.target_monster_rect.top = 30
         
     def update(self): 
         """Update our game object"""
-        
+        self.frame_count += 1
+        if self.frame_count == FPS: 
+            self.round_time += 1
+            self.frame_count = 0
+
+        #Check for collisions
+        self.check_collisions()
 
     def draw(self):
         """Draw the HUD and other assets on the display"""
+        #Set colors
+        WHITE = (255, 255, 255)
+        BLUE = (20, 176, 235)
+        GREEN = (87, 201, 47)
+        PURPLE = (226, 73, 243)
+        YELLOW = (243, 157, 20)
+
+        #Add the monster colors to a list where the index of the color matches target_monster_images
+        colors = [BLUE, GREEN, PURPLE, YELLOW]
+
+       #Set text
+        catch_text = self.font.render("Current Catch", True, WHITE)
+        catch_rect = catch_text.get_rect()
+        catch_rect.centerx = WINDOW_WIDTH//2
+        catch_rect.top = 5
+
+        score_text = self.font.render("Score: " + str(self.score), True, WHITE)
+        score_rect = score_text.get_rect()
+        score_rect.topleft = (5, 5)
+
+        lives_text = self.font.render("Lives: " + str(self.player.lives), True, WHITE)
+        lives_rect = lives_text.get_rect()
+        lives_rect.topleft = (5, 35)
+
+        round_text = self.font.render("Current Round: " + str(self.round_number), True, WHITE)
+        round_rect = round_text.get_rect()
+        round_rect.topleft = (5, 65)
+
+        time_text = self.font.render("Round Time: " + str(self.round_time), True, WHITE)
+        time_rect = time_text.get_rect()
+        time_rect.topright = (WINDOW_WIDTH - 10, 5)
+
+        warp_text = self.font.render("Warps: " + str(self.player.warps), True, WHITE)
+        warp_rect = warp_text.get_rect()
+        warp_rect.topright = (WINDOW_WIDTH - 10, 35)
+
+        #Blit the HUD
+        display_surface.blit(catch_text, catch_rect)
+        display_surface.blit(score_text, score_rect)
+        display_surface.blit(round_text, round_rect)
+        display_surface.blit(lives_text, lives_rect)
+        display_surface.blit(time_text, time_rect)
+        display_surface.blit(warp_text, warp_rect)
+        display_surface.blit(self.target_monster_image, self.target_monster_rect)
         
+        pygame.draw.rect(display_surface, colors[self.target_monster_type], (WINDOW_WIDTH//2 -32, 30, 64, 64), 2)
+        pygame.draw.rect(display_surface, colors[self.target_monster_type], (0, 100, WINDOW_WIDTH, WINDOW_HEIGHT-200))
+
 
     def check_collision(self):
         """Check for collisions between the player and monsters"""
@@ -131,7 +215,7 @@ my_player_group.add(my_player)
 my_monster_group = pygame.sprite.Group()
 
 #Create a game object
-my_game = Game()
+my_game = Game(my_player, my_monster_group)
 
 # The main game loop
 running = True
