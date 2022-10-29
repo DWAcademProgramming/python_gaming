@@ -1,4 +1,5 @@
 from re import S
+from string import whitespace
 from sys import builtin_module_names
 import pygame, random
 
@@ -114,23 +115,107 @@ class Game():
 
     def check_collision(self):
         """Check for collisions between the player and monsters"""
-        
+        #Check for collisions between a player and an individual monster
+        #Be certain that the type of the monster that has collied w the player matches the target.type
+        collided_monster = pygame.sprite.spritecollideany(self.player, self.monster_group)
+
+        #We collided with the monster
+        if collided_monster: 
+            #Caught the correct monster
+            if collided_monster.type == self.target_monster_type:
+                self.score += 100*self.round_number
+                #Remove the caught monster
+                self.player.catch_sound.play()
+                self.choose_new_target()
+            else: #The round is complete
+                self.player.reset()
+                self.choose_new_target()
+        else: 
+            self.player.die_sound.play()
+            self.player.lives -= 1
+            #Check for game over
+            if self.player.lives <= 0:
+                self.pause_game()
+                self.reset_game()
+            self.player.reset()
 
     def start_new_round(self): 
         """Populate the board with new monsters"""
-        pass
+        #Provide a scored bonus based on how quickly the round was finished
+        self.score += int(10000*self.round_number/(1+self.round_time))
+
+        #Reset the round values 
+        self.round_time= 0
+        self.frame_count = 0
+        self.round_number+= 1
+        self.player.warps += 1
+
+        #Remove any remaininng monsters from a game reset
+        for monster in self.monster_group: 
+            self.monster_group.remove(monster)
+        
+        #Add monsters to the monster group
+        for i in range(self.round_number):
+            self.monster_group.add(Monster(random.randint(0, WINDOW_WIDTH - 64), random.randint(100, WINDOW_HEIGHT-164)))
+            self.monster_group.add(Monster(random.randint(0, WINDOW_WIDTH - 64), random.randint(100, WINDOW_HEIGHT-164)))
+            self.monster_group.add(Monster(random.randint(0, WINDOW_WIDTH - 64), random.randint(100, WINDOW_HEIGHT-164)))
+            self.monster_group.add(Monster(random.randint(0, WINDOW_WIDTH - 64), random.randint(100, WINDOW_HEIGHT-164)))
+        
+        #Choose a new target monster
+        self.chose_new_target()
+
+        self.next_level_sound.play()
 
     def choose_new_target(self):
         """Choose a new target monster for the player"""
-        pass
+        target_monster = random.choice(self.monster_group.sprites())
+        self.target_monster_type = target_monster.type
+        self.target_monster_image = target_monster.image
+
 
     def pause_game(self):
         """Pause the game"""
-        pass
+        #Set color
+        WHITE = (255, 255, 255)
+        BLACK = (0,0,0)
+
+        #Create the main pause text
+        main_text = self.font.render(main_text, True, WHITE)
+        main_rect = main_text.get_rect()
+        main_rect.center = (WINDOW_WIDTH//2, WINDOW_HEIGHT//2)
+
+        #Create the subphrase text
+        sub_text = self.font.render(sub_text, True, WHITE)
+        sub_rect = sub_text.get_rect()
+        sub_rect.center = (WINDOW_WIDTH//2, WINDOW_HEIGHT//2 + 64)
+
+        #Display the pause text
+        display_surface.fill(BLACK)
+        display_surface.blit(main_text, main_rect)
+        display_surface.blit(sub_text, sub_rect)
+        pygame.display.update()
+
+        #Pause the game
+        is_paused = True
+        while is_paused: 
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RETURN:
+                        is_paused = False
+                if event.type == pygame.QUIT:
+                    is_paused == False 
+                    running = False
 
     def reset_game(self):
         """Reset the game"""
-        pass
+        self.score = 0 
+        self.round_number = 0
+
+        self.play.lives = 5
+        self.player.warps = 2
+        self.player.reset()
+
+        self.start_new_round()
 
 
 class Player(pygame.spirte.Sprite):
@@ -161,9 +246,9 @@ class Player(pygame.spirte.Sprite):
             self.rect.x -= self.velocity
         if keys[pygame.K_RIGHT] and self.rect.right < WINDOW_WIDTH:
             self.rect.x += self.velocity
-        if keys[pygame.K_UP] and self.rect.top > 0: 
+        if keys[pygame.K_UP] and self.rect.top > 100: 
             self.rect.y -= self.velocity
-        if keys[pygame.K_DOWN] and self.rect.bottom < WINDOW_HEIGHT: 
+        if keys[pygame.K_DOWN] and self.rect.bottom < WINDOW_HEIGHT - 100: 
             self.rect.y += self.velocity
 
     def warp(self):
@@ -203,7 +288,7 @@ class Monster(pygame.sprite.Sprite):
         #Bounce the monster
         if self.rect.left <= 0 or self.rect.right >= WINDOW_WIDTH: 
             self.dx = -1*self.dx
-        if self.rect.top <= 0 or self.rect.bottom >= WINDOW_HEIGHT:
+        if self.rect.top <= 100 or self.rect.bottom >= WINDOW_HEIGHT - 100:
             self.dy = -1*self.dy
 
 #Create a player group and Player object
@@ -216,6 +301,8 @@ my_monster_group = pygame.sprite.Group()
 
 #Create a game object
 my_game = Game(my_player, my_monster_group)
+my_game.pause_game("Monster Wrangler", "Press 'Enter' to begin")
+my_game.start_new_round()
 
 # The main game loop
 running = True
@@ -225,6 +312,10 @@ while running:
         print(event)
         if event.type == pygame.QUIT: 
             running = False 
+        #Player wants to warp
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                my_player.warp()
     
     #Fil the display
     display_surface.fill((0, 0, 0))
